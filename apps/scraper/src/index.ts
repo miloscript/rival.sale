@@ -1,7 +1,11 @@
-import { ScrapedData } from "@repo/types";
+import { MarketplaceItem, ScrapedData } from "@repo/types";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { config } from "dotenv";
+import {
+  MarketplaceScraper,
+  createPlayStationSearchParams,
+} from "./marketplace-scraper.js";
 
 // Load environment variables
 config();
@@ -62,16 +66,74 @@ class WebScraper {
   }
 }
 
-async function main() {
-  const scraper = new WebScraper("https://example.com");
+async function scrapeKupujemProdajem(
+  searchKeywords: string = "collectors edition"
+) {
+  const marketplaceScraper = new MarketplaceScraper(
+    "https://www.kupujemprodajem.com"
+  );
 
-  // Example usage
+  try {
+    console.log("Initializing browser...");
+    await marketplaceScraper.init(true); // headless mode
+
+    // Create search parameters for PlayStation games
+    const searchParams = createPlayStationSearchParams(searchKeywords, {
+      order: "price",
+      hasPrice: true,
+    });
+
+    console.log(`Searching for: "${searchKeywords}" in PlayStation games...`);
+
+    const items = await marketplaceScraper.scrapeMarketplace(searchParams, {
+      timeout: 15000,
+      puppeteerOptions: {
+        scrollToBottom: true,
+        waitForTimeout: 2000,
+      },
+    });
+
+    console.log(`\nFound ${items.length} items:`);
+    items.forEach((item: MarketplaceItem, index: number) => {
+      console.log(`\n${index + 1}. ${item.title}`);
+      console.log(`   Price: ${item.price}`);
+      console.log(`   Location: ${item.location}`);
+      console.log(`   Seller: ${item.seller}`);
+      console.log(`   URL: ${item.url}`);
+    });
+
+    return items;
+  } catch (error) {
+    console.error("Error scraping marketplace:", error);
+    throw error;
+  } finally {
+    await marketplaceScraper.close();
+  }
+}
+
+async function main() {
+  // Get search keywords from environment or use default
+  const searchKeywords = process.env.SEARCH_KEYWORDS || "collectors edition";
+
+  console.log("=== Marketplace Scraper Demo ===");
+  console.log(`Search keywords: ${searchKeywords}`);
+  console.log("================================\n");
+
+  try {
+    await scrapeKupujemProdajem(searchKeywords);
+  } catch (error) {
+    console.error("Scraping failed:", error);
+  }
+
+  console.log("\n=== Basic Web Scraper Demo ===");
+  const basicScraper = new WebScraper("https://example.com");
+
   const urlsToScrape = ["https://example.com", "https://httpbin.org/html"];
 
-  console.log("Starting scraper...");
-  const results = await scraper.scrapeMultiple(urlsToScrape);
+  console.log("Starting basic scraper...");
+  const results = await basicScraper.scrapeMultiple(urlsToScrape);
 
-  console.log("\nScraping results:");
+  console.log("\nBasic scraping results:");
   results.forEach((result, index) => {
     console.log(`\n${index + 1}. ${result.title}`);
     console.log(`   Description: ${result.description}`);
@@ -85,4 +147,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch(console.error);
 }
 
-export { WebScraper };
+export { MarketplaceScraper, WebScraper };

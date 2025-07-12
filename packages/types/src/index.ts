@@ -60,6 +60,35 @@ export interface ScrapingConfig {
   delay: number;
   timeout: number;
   retries: number;
+  usePuppeteer?: boolean;
+  puppeteerOptions?: {
+    headless?: boolean;
+    waitForSelector?: string;
+    waitForTimeout?: number;
+    scrollToBottom?: boolean;
+  };
+}
+
+export interface MarketplaceSearchParams {
+  keywords: string;
+  categoryId?: string;
+  groupId?: string;
+  hasPrice?: boolean;
+  order?: "price" | "date" | "popularity";
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+}
+
+export interface MarketplaceItem {
+  title: string;
+  price: string;
+  location: string;
+  seller: string;
+  description?: string;
+  images?: string[];
+  url: string;
+  timestamp: Date;
 }
 
 // Utility types
