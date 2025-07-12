@@ -1,0 +1,14 @@
+# Downloaded HTML files
+data/*.html
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env
+
+# Debug files
+debug-*.png 

@@ -1,12 +1,13 @@
 # Scraper App
 
-A web scraper application built with Node.js, TypeScript, and Puppeteer for dynamic content scraping.
+A web scraper application built with Node.js, TypeScript, and Puppeteer for downloading HTML content from dynamic websites.
 
 ## Features
 
-- **Basic Web Scraping**: Using Axios and Cheerio for static content
-- **Advanced Marketplace Scraping**: Using Puppeteer for dynamic content (kupujemprodajem.com)
-- **Configurable Search Parameters**: Easy configuration of search terms and filters
+- **HTML Downloading**: Downloads complete HTML content from marketplace pages using Puppeteer
+- **Dynamic Content Support**: Handles JavaScript-rendered content with full browser automation
+- **Configurable Search Parameters**: Easy configuration of search terms and filters for marketplace scraping
+- **File Management**: Automatically saves HTML files with timestamps and organized naming
 - **TypeScript Support**: Full type safety with shared types from `@repo/types`
 - **Rate Limiting**: Respectful scraping with configurable delays
 - **Error Handling**: Comprehensive error handling and logging
@@ -45,13 +46,9 @@ A web scraper application built with Node.js, TypeScript, and Puppeteer for dyna
 
 ## Usage
 
-### Basic Web Scraping
+### HTML Downloading (kupujemprodajem.com)
 
-The scraper includes basic functionality for scraping static content using Axios and Cheerio.
-
-### Marketplace Scraping (kupujemprodajem.com)
-
-The scraper can scrape the Serbian marketplace kupujemprodajem.com for PlayStation games:
+The scraper downloads complete HTML content from the Serbian marketplace kupujemprodajem.com for PlayStation games:
 
 ```bash
 # Default search for "collectors edition"
@@ -59,6 +56,12 @@ pnpm start
 
 # Custom search keywords
 SEARCH_KEYWORDS="ps5 games" pnpm start
+```
+
+The downloaded HTML files are saved in the `data/` folder with timestamps and search parameters in the filename:
+
+```
+data/marketplace_collectors_edition_2025-07-12T21-43-29-391Z.html
 ```
 
 ### Configuration
@@ -90,8 +93,8 @@ const searchParams = createPlayStationSearchParams("collectors edition", {
   hasPrice: true,
 });
 
-const items = await scraper.scrapeMarketplace(searchParams);
-console.log(items);
+const htmlContent = await scraper.downloadMarketplaceHTML(searchParams);
+console.log(`Downloaded ${htmlContent.length} characters of HTML`);
 
 await scraper.close();
 ```
@@ -100,26 +103,23 @@ await scraper.close();
 
 - `pnpm dev` - Run in development mode with hot reloading
 - `pnpm build` - Build for production
-- `pnpm start` - Run production build
+- `pnpm start` - Run production build and download HTML
 - `pnpm lint` - Run ESLint
 - `pnpm check-types` - Type check without emitting files
 
-## Debug Mode
+## File Structure
 
-For debugging marketplace scraping, you can run the debug scraper:
-
-```bash
-# Run the debug scraper (opens browser in non-headless mode)
-node dist/debug-scraper.js
 ```
-
-This will:
-
-- Open a visible browser window
-- Navigate to the search page
-- Take a screenshot for debugging
-- Log page structure information
-- Keep the browser open for manual inspection
+apps/scraper/
+├── data/                     # Downloaded HTML files (gitignored)
+│   └── marketplace_*.html    # Timestamped HTML files
+├── src/
+│   ├── index.ts             # Main application entry point
+│   └── marketplace-scraper.ts # Puppeteer-based HTML downloader
+├── package.json             # Dependencies and scripts
+├── .gitignore              # Ignores data files and build output
+└── README.md               # This file
+```
 
 ## Environment Variables
 
@@ -131,31 +131,68 @@ SEARCH_KEYWORDS=collectors edition
 PUPPETEER_HEADLESS=true
 PUPPETEER_TIMEOUT=15000
 SCRAPE_DELAY_MS=1000
-
-# Output configuration
-OUTPUT_FORMAT=json
-OUTPUT_FILE=scraped_data.json
 ```
+
+## Features
+
+### Smart HTML Downloading
+
+- Waits for dynamic content to load completely
+- Handles JavaScript-rendered pages
+- Optional scrolling to load more content
+- Automatic file naming with timestamps
+
+### Search Configuration
+
+- PlayStation games category targeting
+- Price filtering options
+- Multiple sorting options (price, date, popularity)
+- Location and seller filtering
+
+### File Management
+
+- Organized file naming: `marketplace_{keywords}_{timestamp}.html`
+- Automatic data folder creation
+- File size reporting
+- UTF-8 encoding for proper character support
 
 ## Architecture
 
 The scraper is built with:
 
-- **TypeScript**: Full type safety
-- **Puppeteer**: For dynamic content scraping
-- **Axios + Cheerio**: For static content scraping
-- **Shared Types**: Using `@repo/types` for consistent interfaces
-- **Error Handling**: Comprehensive error handling and logging
+- **TypeScript**: Full type safety with shared types
+- **Puppeteer**: For dynamic content handling and HTML downloading
+- **Node.js**: File system operations for saving HTML content
+- **Environment Variables**: For flexible configuration
 
 ## Supported Sites
 
 - **kupujemprodajem.com**: Serbian marketplace (PlayStation games category)
-- **Generic websites**: Basic scraping with Axios and Cheerio
+  - Category ID: 1036 (PlayStation games)
+  - Group ID: 1039 (PlayStation group)
+  - Configurable search parameters
 
 ## Rate Limiting
 
 The scraper includes built-in rate limiting to be respectful to target servers:
 
-- 1-second delay between requests by default
-- Configurable through environment variables
+- 3-second wait for initial page load
+- 2-second wait after scrolling
+- Configurable delays through environment variables
 - Respectful user agent headers
+
+## Downloaded Files
+
+HTML files are saved with the following naming convention:
+
+```
+marketplace_{search_keywords}_{ISO_timestamp}.html
+```
+
+Example:
+
+```
+marketplace_collectors_edition_2025-07-12T21-43-29-391Z.html
+```
+
+The files contain the complete HTML source of the search results page, including all dynamically loaded content.

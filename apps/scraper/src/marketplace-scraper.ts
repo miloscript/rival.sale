@@ -3,6 +3,8 @@ import {
   MarketplaceSearchParams,
   ScrapingConfig,
 } from "@repo/types";
+import { writeFileSync } from "fs";
+import { join } from "path";
 import puppeteer, { Browser, Page } from "puppeteer";
 
 export class MarketplaceScraper {
@@ -49,16 +51,16 @@ export class MarketplaceScraper {
     return url.toString();
   }
 
-  async scrapeMarketplace(
+  async downloadMarketplaceHTML(
     searchParams: MarketplaceSearchParams,
     config?: Partial<ScrapingConfig>
-  ): Promise<MarketplaceItem[]> {
+  ): Promise<string> {
     if (!this.browser) {
       throw new Error("Browser not initialized. Call init() first.");
     }
 
     const page = await this.browser.newPage();
-    const items: MarketplaceItem[] = [];
+    let htmlContent = "";
 
     try {
       // Set user agent to avoid detection
@@ -67,76 +69,43 @@ export class MarketplaceScraper {
       );
 
       const searchUrl = this.buildSearchUrl(searchParams);
-      console.log(`Scraping marketplace: ${searchUrl}`);
+      console.log(`Downloading HTML from: ${searchUrl}`);
 
       // Navigate to the search page
       await page.goto(searchUrl, { waitUntil: "networkidle2" });
 
-      // Wait for the search results to load
-      await page
-        .waitForSelector(".AdItem", { timeout: config?.timeout || 10000 })
-        .catch(() => {
-          console.log("No search results found or page structure changed");
-        });
+      // Wait a bit for dynamic content to load
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // Scroll to load more results if needed
       if (config?.puppeteerOptions?.scrollToBottom) {
         await this.scrollToBottom(page);
+        // Wait a bit more after scrolling
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
-      // Extract items from the page
-      const scrapedItems = await page.evaluate(() => {
-        const itemElements = document.querySelectorAll(".AdItem");
-        const items: any[] = [];
+      // Get the full HTML content
+      htmlContent = await page.content();
 
-        itemElements.forEach((element) => {
-          try {
-            const titleElement = element.querySelector(".AdItem-title a");
-            const priceElement = element.querySelector(".AdItem-price");
-            const locationElement = element.querySelector(".AdItem-location");
-            const sellerElement = element.querySelector(".AdItem-seller");
-            const linkElement = element.querySelector(".AdItem-title a");
+      // Generate filename with timestamp and search params
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const keywords = searchParams.keywords.replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = `marketplace_${keywords}_${timestamp}.html`;
+      const filepath = join(process.cwd(), "data", filename);
 
-            if (titleElement && priceElement) {
-              const item = {
-                title: titleElement.textContent?.trim() || "",
-                price: priceElement.textContent?.trim() || "",
-                location: locationElement?.textContent?.trim() || "",
-                seller: sellerElement?.textContent?.trim() || "",
-                url: linkElement?.getAttribute("href") || "",
-                timestamp: new Date(),
-              };
+      // Save HTML to file
+      writeFileSync(filepath, htmlContent, "utf8");
 
-              items.push(item);
-            }
-          } catch (error) {
-            console.error("Error extracting item:", error);
-          }
-        });
-
-        return items;
-      });
-
-      // Convert to MarketplaceItem objects with full URLs
-      items.push(
-        ...scrapedItems.map((item) => ({
-          ...item,
-          url: item.url.startsWith("http")
-            ? item.url
-            : `${this.baseUrl}${item.url}`,
-          timestamp: new Date(),
-        }))
-      );
-
-      console.log(`Successfully scraped ${items.length} items`);
+      console.log(`HTML content saved to: ${filepath}`);
+      console.log(`File size: ${(htmlContent.length / 1024).toFixed(2)} KB`);
     } catch (error) {
-      console.error("Error scraping marketplace:", error);
+      console.error("Error downloading marketplace HTML:", error);
       throw error;
     } finally {
       await page.close();
     }
 
-    return items;
+    return htmlContent;
   }
 
   private async scrollToBottom(page: Page): Promise<void> {
