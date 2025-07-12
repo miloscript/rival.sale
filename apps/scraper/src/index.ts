@@ -1,16 +1,10 @@
+import { ScrapedData } from "@repo/types";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { config } from "dotenv";
 
 // Load environment variables
 config();
-
-interface ScrapedData {
-  title: string;
-  description: string;
-  url: string;
-  timestamp: Date;
-}
 
 class WebScraper {
   private baseUrl: string;
@@ -92,4 +86,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 export { WebScraper };
-export type { ScrapedData };
