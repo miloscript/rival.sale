@@ -1,5 +1,6 @@
 # Downloaded HTML files
 data/*.html
+data/*.json
 
 # Node modules
 node_modules/

@@ -60,6 +60,7 @@ export interface ScrapingConfig {
   delay: number;
   timeout: number;
   retries: number;
+  maxPages?: number;
   usePuppeteer?: boolean;
   puppeteerOptions?: {
     headless?: boolean;
@@ -89,6 +90,188 @@ export interface MarketplaceItem {
   images?: string[];
   url: string;
   timestamp: Date;
+}
+
+// Detailed KupujemProdajem ad types based on scraped HTML structure
+export interface KupujemProdajemAd {
+  id: string;
+  title: string;
+  price: AdPrice;
+  location: AdLocation;
+  description: string;
+  images: AdImage[];
+  url: string;
+  seller: AdSeller;
+  metrics: AdMetrics;
+  status: AdStatus;
+  metadata: AdMetadata;
+}
+
+export interface AdPrice {
+  amount: number;
+  currency: string;
+  formatted: string; // e.g., "690 din"
+}
+
+export interface AdLocation {
+  name: string; // e.g., "Leskovac"
+  hasDelivery?: boolean;
+  icon?: string;
+}
+
+export interface AdImage {
+  url: string;
+  alt: string;
+  width: string;
+  height: string;
+  loading?: "eager" | "lazy";
+}
+
+export interface AdSeller {
+  name?: string;
+  hasKpStore: boolean;
+  storeUrl?: string;
+  storeId?: string;
+}
+
+export interface AdMetrics {
+  views: number;
+  favorites: number;
+  postedAgo: string; // e.g., "pre 6 dana"
+  postedDate?: Date;
+}
+
+export interface AdStatus {
+  isActive: boolean;
+  isPromoted: boolean;
+  hasPromotion: boolean;
+}
+
+export interface AdMetadata {
+  sectionId: string;
+  classes: string[];
+  filterId?: string;
+  scrolled: boolean;
+  category: string;
+  subcategory: string;
+}
+
+// Parsed ad result from HTML scraping
+export interface ParsedAd {
+  raw: KupujemProdajemAd;
+  parsed: {
+    priceNumeric: number;
+    postedDaysAgo: number;
+    imageUrls: string[];
+    isValidAd: boolean;
+  };
+  scrapingMetadata: {
+    scrapedAt: Date;
+    sourceUrl: string;
+    parsingSuccess: boolean;
+    parsingErrors?: string[];
+  };
+}
+
+// Collection of ads from a search result
+export interface AdSearchResult {
+  ads: ParsedAd[];
+  searchParams: MarketplaceSearchParams;
+  totalFound: number;
+  scrapingStats: {
+    totalRequested: number;
+    successfullyParsed: number;
+    failedToParse: number;
+    averageParsingTime: number;
+  };
+  metadata: {
+    scrapedAt: Date;
+    sourceUrl: string;
+    htmlFileSize: number;
+    htmlFilePath: string;
+  };
+}
+
+// HTML parsing configuration
+export interface HtmlParsingConfig {
+  selectors: KupujemProdajemSelectors;
+  fallbackSelectors?: Partial<KupujemProdajemSelectors>;
+  textExtractionOptions: TextExtractionOptions;
+  validation: ValidationRules;
+}
+
+export interface KupujemProdajemSelectors {
+  adContainer: string;
+  adId: string;
+  title: string;
+  price: string;
+  location: string;
+  description: string;
+  image: string;
+  imageAlt: string;
+  adUrl: string;
+  viewCount: string;
+  favoriteCount: string;
+  postedTime: string;
+  kpStoreLink: string;
+  kpStoreName: string;
+  promotionButton: string;
+}
+
+export interface TextExtractionOptions {
+  trim: boolean;
+  removeExtraWhitespace: boolean;
+  convertToLowercase: boolean;
+  extractNumbers: boolean;
+  extractCurrency: boolean;
+}
+
+export interface ValidationRules {
+  requiredFields: (keyof KupujemProdajemAd)[];
+  priceValidation: {
+    minPrice: number;
+    maxPrice: number;
+    allowedCurrencies: string[];
+  };
+  titleValidation: {
+    minLength: number;
+    maxLength: number;
+  };
+  urlValidation: {
+    mustStartWith: string;
+    mustContain: string[];
+  };
+}
+
+// HTML parsing result
+export interface HtmlParsingResult {
+  success: boolean;
+  extractedAds: ParsedAd[];
+  errors: ParsingError[];
+  warnings: ParsingWarning[];
+  stats: {
+    totalAdsFound: number;
+    successfullyParsed: number;
+    failedToParse: number;
+    parsingTimeMs: number;
+    htmlSizeKb: number;
+  };
+}
+
+export interface ParsingError {
+  type: "MISSING_SELECTOR" | "INVALID_DATA" | "EXTRACTION_FAILED";
+  message: string;
+  adIndex?: number;
+  fieldName?: string;
+  selector?: string;
+}
+
+export interface ParsingWarning {
+  type: "FALLBACK_USED" | "INCOMPLETE_DATA" | "SUSPICIOUS_VALUE";
+  message: string;
+  adIndex?: number;
+  fieldName?: string;
+  value?: string;
 }
 
 // Utility types
